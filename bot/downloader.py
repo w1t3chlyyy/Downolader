@@ -62,6 +62,7 @@ class Media:
     width: int | None = None
     height: int | None = None
     thumb: Path | None = None
+    note: str = ""
 
 
 def _pick(out: Path, exts: set[str]) -> Path | None:
@@ -132,11 +133,9 @@ def _yandex(url: str, out: Path) -> Media:
     m = YM_RE.search(url)
     if not m:
         raise ValueError("ym_not_track")
-    if not config.YANDEX_TOKEN:
-        raise PermissionError("ym_no_token")
     album_id, track_id = m.groups()
     if _ym is None:
-        _ym = Client(config.YANDEX_TOKEN).init()
+        _ym = Client(config.YANDEX_TOKEN or None).init()
     track = _ym.tracks([f"{track_id}:{album_id}" if album_id else track_id])[0]
     path = out / f"{track.id}.mp3"
     try:
@@ -151,6 +150,7 @@ def _yandex(url: str, out: Path) -> Media:
     return Media(
         path, "audio", title=track.title or "", author=", ".join(track.artists_name()),
         duration=int(track.duration_ms / 1000) if track.duration_ms else None, thumb=thumb,
+        note="" if config.YANDEX_TOKEN else "⏱ Без подписки Яндекс отдаёт только первые 30 секунд",
     )
 
 

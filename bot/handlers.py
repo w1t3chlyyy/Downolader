@@ -185,6 +185,8 @@ async def process(chat_id: int, uid: int, url: str, reply_to: int | None = None)
             parts.append(f"<b>{escape(media.title[:180])}</b>")
         if media.author:
             parts.append(f"👤 {escape(media.author[:80])}")
+        if media.note:
+            parts.append(media.note)
         parts.append(f"{p.emoji} {p.name} · 📥 @{bot.get('username', 'bot')}")
         kb = {"inline_keyboard": [[{"text": "🔗 Оригинал", "url": url}]]}
         await send_media(chat_id, media, "\n".join(parts), kb, reply_to)

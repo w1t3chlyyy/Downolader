@@ -7,7 +7,7 @@ Telegram-бот на вебхуках + красивая админ-панель
 2. **Бот**: @BotFather → `/newbot` → токен. Свой Telegram ID узнай у @userinfobot.
 3. **GitHub**: залей папку проекта в репозиторий.
 4. **Vercel**: Add New → Project → выбери репозиторий. В Environment Variables добавь переменные из `.env.example`:
-   `BOT_TOKEN`, `ADMIN_PASSWORD`, `ADMIN_IDS`, `WEBHOOK_SECRET`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY` (+ `YANDEX_TOKEN`). Deploy.
+   `BOT_TOKEN`, `ADMIN_PASSWORD`, `ADMIN_IDS`, `WEBHOOK_SECRET`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY` (`YANDEX_TOKEN` и `COOKIES_B64` — по желанию, можно пропустить). Deploy.
 5. **Вебхук**: открой `https://ТВОЙ-ПРОЕКТ.vercel.app/admin` → войди → «Обзор» → **«Установить вебхук»**.
    Ссылка вебхука: `https://ТВОЙ-ПРОЕКТ.vercel.app/api/webhook`
    Вручную: `https://api.telegram.org/bot<BOT_TOKEN>/setWebhook?url=https://ТВОЙ-ПРОЕКТ.vercel.app/api/webhook&secret_token=<WEBHOOK_SECRET>`
