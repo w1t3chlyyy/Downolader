@@ -12,6 +12,7 @@ ADMIN_IDS = _ids(os.getenv("ADMIN_IDS", ""))
 SUPABASE_URL = os.getenv("SUPABASE_URL", "").rstrip("/")
 SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_KEY", "")
 YANDEX_TOKEN = os.getenv("YANDEX_TOKEN", "")
+YANDEX_PROXY = os.getenv("YANDEX_PROXY", "")  # прокси из РФ для Яндекс Музыки (необязательно)
 COOKIES_B64 = os.getenv("COOKIES_B64", "")  # cookies.txt в base64 (Instagram и др.)
 MAX_MB = 50
 

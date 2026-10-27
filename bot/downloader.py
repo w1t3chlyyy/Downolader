@@ -1,5 +1,6 @@
 import asyncio
 import base64
+import json
 import re
 from dataclasses import dataclass
 from html import unescape
@@ -63,6 +64,7 @@ class Media:
     height: int | None = None
     thumb: Path | None = None
     note: str = ""
+    source: str = ""
 
 
 def _pick(out: Path, exts: set[str]) -> Path | None:
@@ -110,6 +112,7 @@ def _ydl(url: str, out: Path, audio: bool) -> Media:
         title=info.get("track") or info.get("title") or "",
         author=info.get("artist") or info.get("uploader") or info.get("channel") or "",
         duration=int(info["duration"]) if info.get("duration") else None,
+        source=info.get("webpage_url") or url,
     )
     if audio:
         if f := _pick(out, AUDIO_EXT):
@@ -135,7 +138,12 @@ def _yandex(url: str, out: Path) -> Media:
         raise ValueError("ym_not_track")
     album_id, track_id = m.groups()
     if _ym is None:
-        _ym = Client(config.YANDEX_TOKEN or None).init()
+        kw = {}
+        if config.YANDEX_PROXY:
+            from yandex_music.utils.request import Request
+
+            kw["request"] = Request(proxy_url=config.YANDEX_PROXY)
+        _ym = Client(config.YANDEX_TOKEN or None, **kw).init()
     track = _ym.tracks([f"{track_id}:{album_id}" if album_id else track_id])[0]
     path = out / f"{track.id}.mp3"
     try:
@@ -155,22 +163,51 @@ def _yandex(url: str, out: Path) -> Media:
 
 
 async def _og(url: str, out: Path) -> Media:
-    """Запасной путь для Pinterest: og:video / og:image со страницы пина."""
-    async with httpx.AsyncClient(headers={"User-Agent": config.UA}, timeout=25, follow_redirects=True) as s:
-        html = (await s.get(url)).text
-        t = re.search(r'<meta[^>]+property=["\']og:title["\'][^>]+content=["\']([^"\']*)', html)
-        title = unescape(t.group(1)) if t else ""
-        for prop, kind, ext in (("og:video", "video", ".mp4"), ("og:image", "photo", ".jpg")):
-            m = re.search(rf'<meta[^>]+property=["\']{prop}["\'][^>]+content=["\']([^"\']+)', html)
-            if not m:
-                continue
-            src = unescape(m.group(1))
-            cands = [re.sub(r"/\d+x/", "/originals/", src), src] if kind == "photo" else [src]
-            for c in cands:
-                r = await s.get(c)
-                if r.status_code == 200:
-                    path = out / f"pin{ext}"
-                    path.write_bytes(r.content)
+    """Pinterest: пробуем публичный API пина, затем og-теги страницы."""
+    hdr = {"User-Agent": config.UA, "Accept-Language": "en-US,en;q=0.9"}
+    async with httpx.AsyncClient(headers=hdr, timeout=25, follow_redirects=True) as s:
+        r = await s.get(url)
+        html = r.text
+        m = re.search(r"/pin/(\d+)", str(r.url)) or re.search(r"/pin/(\d+)", html)
+        title, cands = "", []
+        if m:
+            pid = m.group(1)
+            opts = json.dumps({"options": {"id": pid, "field_set_key": "detailed"}, "context": {}}, separators=(",", ":"))
+            try:
+                api = await s.get(
+                    "https://www.pinterest.com/resource/PinResource/get/",
+                    params={"source_url": f"/pin/{pid}/", "data": opts},
+                    headers={"X-Requested-With": "XMLHttpRequest", "Accept": "application/json"},
+                )
+                data = api.json()["resource_response"]["data"]
+                title = data.get("title") or data.get("grid_title") or ""
+                vids = [v for v in ((data.get("videos") or {}).get("video_list") or {}).values()
+                        if str(v.get("url", "")).endswith(".mp4")]
+                if vids:
+                    cands.append(("video", max(vids, key=lambda v: v.get("width", 0))["url"]))
+                orig = ((data.get("images") or {}).get("orig") or {}).get("url")
+                if orig:
+                    cands.append(("photo", orig))
+            except Exception:  # noqa: BLE001
+                pass
+        for prop, kind in (("og:video", "video"), ("og:image", "photo")):
+            for pat in (
+                rf'<meta[^>]+(?:property|name)=["\']{prop}["\'][^>]+content=["\']([^"\']+)',
+                rf'<meta[^>]+content=["\']([^"\']+)["\'][^>]+(?:property|name)=["\']{prop}["\']',
+            ):
+                mm = re.search(pat, html)
+                if mm:
+                    src = unescape(mm.group(1))
+                    if kind == "photo" or src.endswith(".mp4"):
+                        cands.append((kind, src))
+                    break
+        for kind, src in cands:
+            tries = [re.sub(r"/\d+x/", "/originals/", src), src] if kind == "photo" else [src]
+            for c in tries:
+                rr = await s.get(c)
+                if rr.status_code == 200 and rr.content:
+                    path = out / ("pin.mp4" if kind == "video" else "pin.jpg")
+                    path.write_bytes(rr.content)
                     return Media(path, kind, title=title)
     raise RuntimeError("Медиа не найдено на странице")
 
@@ -184,3 +221,23 @@ async def fetch_media(url: str, p: Platform, out: Path) -> Media:
         if p.key == "pinterest":
             return await _og(url, out)
         raise
+
+
+def _sc_search(query: str, out: Path) -> Media:
+    """Ищет трек на SoundCloud и качает первый результат, который не защищён DRM."""
+    with yt_dlp.YoutubeDL({"quiet": True, "no_warnings": True, "extract_flat": True, "cachedir": False}) as ydl:
+        res = ydl.extract_info(f"scsearch5:{query}", download=False)
+    last: Exception | None = None
+    for e in (res.get("entries") or [])[:4]:
+        u = e.get("url") or e.get("webpage_url")
+        if not u:
+            continue
+        try:
+            return _ydl(u, out, True)
+        except Exception as ex:  # noqa: BLE001
+            last = ex
+    raise last or RuntimeError("Ничего не найдено")
+
+
+async def search_media(query: str, out: Path) -> Media:
+    return await asyncio.to_thread(_sc_search, query, out)

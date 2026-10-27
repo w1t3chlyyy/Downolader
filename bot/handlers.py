@@ -8,7 +8,7 @@ from html import escape
 from pathlib import Path
 
 from . import config, db, tg
-from .downloader import Media, detect, fetch_media
+from .downloader import Media, Platform, detect, fetch_media, search_media
 
 log = logging.getLogger("bot")
 URL_RE = re.compile(r"https?://[^\s<>\"]+")
@@ -19,7 +19,8 @@ DEFAULT_WELCOME = {
         "<b>👋 Привет, {name}!</b>\n\n"
         "Пришли мне ссылку — и я скачаю видео или музыку прямо сюда.\n\n"
         "🎬 TikTok · 📸 Instagram · 📌 Pinterest\n"
-        "☁️ SoundCloud · 🎧 Яндекс Музыка · ▶️ YouTube"
+        "☁️ SoundCloud · 🎧 Яндекс Музыка · ▶️ YouTube\n\n"
+        "🔎 Или просто напиши название трека — найду на SoundCloud"
     ),
     "photo": "",
     "effect": "",
@@ -118,6 +119,12 @@ def status_text(p, text: str) -> str:
 
 def friendly_error(exc: Exception, p) -> str:
     s = str(exc).lower()
+    if "drm" in s:
+        return ("🔐 Этот трек защищён (DRM), например платный SoundCloud Go+, и скачать его нельзя.\n"
+                "💡 Напиши название трека текстом — поищу другую версию.")
+    if "451" in s or "legal reasons" in s:
+        return ("🌍 Яндекс Музыка не отвечает зарубежным серверам, поэтому по ссылке не скачать.\n"
+                "💡 Напиши название трека текстом (например: <i>Исполнитель — Трек</i>) — найду его на SoundCloud.")
     if isinstance(exc, PermissionError) or "ym_no_token" in s:
         return "🔑 Для Яндекс Музыки не настроен токен. Напиши администратору бота."
     if "ym_not_track" in s:
@@ -155,11 +162,11 @@ async def send_media(chat_id: int, m: Media, caption: str, kb: dict, reply_to: i
             f.close()
 
 
-async def process(chat_id: int, uid: int, url: str, reply_to: int | None = None) -> None:
-    p = detect(url)
+async def process(chat_id: int, uid: int, url: str, reply_to: int | None = None, query: str | None = None) -> None:
+    p = Platform("soundcloud", "SoundCloud", "☁️") if query else detect(url)
     rp = {"message_id": reply_to, "allow_sending_without_reply": True} if reply_to else None
     st = await tg.call("sendMessage", chat_id=chat_id, parse_mode="HTML", reply_parameters=rp,
-                       text=status_text(p, "🔎 Анализирую ссылку…"))
+                       text=status_text(p, "🔎 Ищу трек…" if query else "🔎 Анализирую ссылку…"))
     mid = st["message_id"]
 
     async def step(t: str) -> None:
@@ -173,7 +180,7 @@ async def process(chat_id: int, uid: int, url: str, reply_to: int | None = None)
     ok, kind = False, None
     try:
         await step("⬇️ Скачиваю…")
-        media = await fetch_media(url, p, tmp)
+        media = await (search_media(query, tmp) if query else fetch_media(url, p, tmp))
         kind = media.kind
         if media.path.stat().st_size > config.MAX_MB * 1024 * 1024:
             await step(f"📦 Файл больше <b>{config.MAX_MB} МБ</b> — это лимит Telegram для ботов.")
@@ -188,7 +195,8 @@ async def process(chat_id: int, uid: int, url: str, reply_to: int | None = None)
         if media.note:
             parts.append(media.note)
         parts.append(f"{p.emoji} {p.name} · 📥 @{bot.get('username', 'bot')}")
-        kb = {"inline_keyboard": [[{"text": "🔗 Оригинал", "url": url}]]}
+        src = media.source or url
+        kb = {"inline_keyboard": [[{"text": "🔗 Оригинал", "url": src}]]} if src else None
         await send_media(chat_id, media, "\n".join(parts), kb, reply_to)
         ok = True
         await tg.call("deleteMessage", chat_id=chat_id, message_id=mid)
@@ -204,7 +212,9 @@ async def process(chat_id: int, uid: int, url: str, reply_to: int | None = None)
 
 
 async def run_links(chat_id: int, uid: int, urls: list[str], reply_to: int | None) -> None:
-    await asyncio.gather(*(process(chat_id, uid, u, reply_to) for u in urls[:2]))
+    jobs = [process(chat_id, uid, "", reply_to, query=u[7:]) if u.startswith("search:")
+            else process(chat_id, uid, u, reply_to) for u in urls[:2]]
+    await asyncio.gather(*jobs)
 
 
 # ───────────────────────── Апдейты ─────────────────────────
@@ -260,8 +270,14 @@ async def on_message(m: dict) -> None:
 
     urls = list(dict.fromkeys(URL_RE.findall(text)))[:2]
     if not urls:
+        q = text.strip()
+        if private and 2 <= len(q) <= 120 and not q.startswith("/"):
+            missing = await missing_channels(uid)
+            if missing:
+                return await send_gate(chat_id, uid, missing, [f"search:{q}"])
+            return await process(chat_id, uid, "", m["message_id"], query=q)
         if private:
-            await tg.call("sendMessage", chat_id=chat_id, text="🔗 Пришли ссылку на видео, трек или пост — и я всё скачаю.")
+            await tg.call("sendMessage", chat_id=chat_id, text="🔗 Пришли ссылку или название трека — и я всё скачаю.")
         return
     missing = await missing_channels(uid)
     if missing:
