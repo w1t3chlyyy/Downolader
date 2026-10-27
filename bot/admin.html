@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Админ-панель</title>
+<style>
+:root{--bg:#f5f5f7;--card:#fff;--tx:#1d1d1f;--mut:#6e6e73;--line:#e5e5ea;--ac:#000;--act:#fff;--ok:#16a34a;--bad:#dc2626;--soft:#f2f2f7;--r:18px}
+@media(prefers-color-scheme:dark){:root{--bg:#000;--card:#1c1c1e;--tx:#f5f5f7;--mut:#98989d;--line:#2c2c2e;--ac:#fff;--act:#000;--soft:#2c2c2e}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,sans-serif}
+[hidden]{display:none!important}
+h1{font-size:28px;letter-spacing:-.02em;margin:0 0 4px}h2{font-size:17px;margin:0 0 14px}p.sub{color:var(--mut);margin:0 0 24px}
+.center{min-height:100vh;display:grid;place-items:center;padding:20px}
+.card{background:var(--card);border-radius:var(--r);padding:22px;border:1px solid var(--line)}
+.login{width:100%;max-width:360px;text-align:center}.logo{font-size:42px;margin-bottom:8px}
+.in,select,textarea{width:100%;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--soft);color:var(--tx);font:inherit;outline:none}
+.in:focus,select:focus,textarea:focus{border-color:var(--ac)}textarea{min-height:150px;resize:vertical;font-family:ui-monospace,Menlo,monospace;font-size:13.5px}
+.btn{border:0;border-radius:12px;padding:11px 18px;font:inherit;font-weight:600;cursor:pointer;background:var(--ac);color:var(--act);transition:.15s}
+.btn:hover{opacity:.85}.btn:disabled{opacity:.4}.btn.ghost{background:var(--soft);color:var(--tx)}.btn.sm{padding:7px 12px;font-size:13px}.btn.danger{background:transparent;color:var(--bad)}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.grow{flex:1;min-width:140px}.stack>*+*{margin-top:12px}
+label.l{display:block;font-size:13px;font-weight:600;color:var(--mut);margin:0 0 6px}
+.shell{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+aside{padding:24px 16px;border-right:1px solid var(--line);position:sticky;top:0;height:100vh;display:flex;flex-direction:column;gap:6px}
+.brand{font-weight:700;font-size:18px;padding:0 12px 18px}
+.nav{background:none;border:0;text-align:left;padding:11px 14px;border-radius:12px;font:inherit;color:var(--mut);cursor:pointer;font-weight:500}
+.nav.on{background:var(--card);color:var(--tx);font-weight:600;box-shadow:0 1px 0 var(--line)}
+main{padding:36px;max-width:1100px;width:100%}
+.grid{display:grid;gap:16px}.g4{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}.g2{grid-template-columns:1fr 1fr}
+.stat b{display:block;font-size:32px;letter-spacing:-.03em}.stat span{color:var(--mut);font-size:13px}
+.bars{display:flex;align-items:flex-end;gap:10px;height:150px}.bars div{flex:1;text-align:center;font-size:11px;color:var(--mut);display:flex;flex-direction:column;justify-content:flex-end;height:100%}
+.bars i{display:block;background:var(--ac);border-radius:8px 8px 4px 4px;min-height:3px;margin-bottom:6px}
+.hb{display:grid;grid-template-columns:110px 1fr 36px;gap:10px;align-items:center;margin:9px 0;font-size:13.5px}.hb i{display:block;height:8px;border-radius:6px;background:var(--ac)}
+.pill{display:inline-block;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:600;background:var(--soft)}.pill.ok{color:var(--ok)}.pill.bad{color:var(--bad)}
+code.u{display:block;background:var(--soft);padding:10px 12px;border-radius:10px;word-break:break-all;font-size:13px}
+.ch{display:flex;align-items:center;gap:12px;padding:14px 0;border-top:1px solid var(--line)}.ch:first-child{border-top:0}
+.sw{position:relative;width:46px;height:28px;flex:none}.sw input{display:none}.sw span{position:absolute;inset:0;border-radius:99px;background:var(--line);transition:.2s;cursor:pointer}
+.sw span:after{content:"";position:absolute;left:3px;top:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:.2s}
+.sw input:checked+span{background:var(--ok)}.sw input:checked+span:after{left:21px}
+.tb{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}.tb button{min-width:36px}
+.ed{display:grid;grid-template-columns:1fr 340px;gap:20px;align-items:start}.pv{position:sticky;top:20px}
+.phone{background:#7a9bb8 linear-gradient(160deg,#8fb0c9,#6f8fb0);border-radius:22px;padding:18px 14px}
+.bub{background:#fff;color:#000;border-radius:16px 16px 16px 4px;overflow:hidden;max-width:100%;font-size:14.5px;line-height:1.4}
+.bub img{width:100%;display:block}.bub .t{padding:9px 12px;word-wrap:break-word}.bub .t code{background:#eee;padding:0 3px;border-radius:4px}
+.bub .sp{background:#bbb;color:#bbb;border-radius:4px}.bub .ce{filter:drop-shadow(0 0 6px #f5b94266)}
+.kb{margin-top:5px}.kb div{background:#ffffff40;color:#fff;text-align:center;border-radius:10px;padding:8px;margin-top:4px;font-weight:600;font-size:14px;backdrop-filter:blur(6px)}
+.drop{border:1.5px dashed var(--line);border-radius:14px;padding:14px;display:flex;gap:14px;align-items:center}.drop img{width:64px;height:64px;object-fit:cover;border-radius:10px}
+.bt{display:grid;grid-template-columns:1fr 1.4fr auto;gap:8px;margin-bottom:8px}
+#toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,20px);background:var(--ac);color:var(--act);padding:12px 20px;border-radius:14px;font-weight:600;opacity:0;pointer-events:none;transition:.25s;z-index:9;max-width:90vw}
+#toast.on{opacity:1;transform:translate(-50%,0)}#toast.err{background:var(--bad);color:#fff}
+.hint{font-size:12.5px;color:var(--mut);margin-top:6px}
+@media(max-width:860px){.shell{grid-template-columns:1fr}aside{position:static;height:auto;flex-direction:row;overflow:auto;padding:12px;border:0;border-bottom:1px solid var(--line)}.brand{display:none}main{padding:20px 16px}.ed,.g2{grid-template-columns:1fr}.pv{position:static}}
+</style>
+</head>
+<body>
+<div id="login" class="center" hidden>
+  <div class="card login stack">
+    <div class="logo">📥</div><h1 style="font-size:24px">Админ-панель</h1>
+    <p class="sub" style="margin:0">Введи пароль, чтобы продолжить</p>
+    <input id="pw" class="in" type="password" placeholder="Пароль" autocomplete="current-password">
+    <button class="btn" style="width:100%" onclick="login()">Войти</button>
+  </div>
+</div>
+
+<div id="app" class="shell" hidden>
+  <aside>
+    <div class="brand">📥 Загрузчик</div>
+    <button class="nav on" data-p="dash">📊 Обзор</button>
+    <button class="nav" data-p="welcome">👋 Приветствие</button>
+    <button class="nav" data-p="subs">🔒 Подписки</button>
+    <div style="flex:1"></div>
+    <button class="nav" onclick="logout()">Выйти</button>
+  </aside>
+  <main>
+    <section id="p-dash">
+      <h1>Обзор</h1><p class="sub" id="botline">&nbsp;</p>
+      <div class="grid g4" id="stats"></div>
+      <div class="grid g2" style="margin-top:16px">
+        <div class="card"><h2>Загрузки за 7 дней</h2><div class="bars" id="bars"></div></div>
+        <div class="card"><h2>Платформы</h2><div id="plats"></div></div>
+      </div>
+      <div class="card stack" style="margin-top:16px">
+        <div class="row"><h2 style="margin:0" class="grow">Вебхук</h2><span id="whpill" class="pill"></span></div>
+        <code class="u" id="whurl"></code>
+        <div class="hint" id="wherr"></div>
+        <div class="row"><button class="btn" onclick="setHook()">Установить вебхук</button><button class="btn ghost" onclick="copyUrl()">Скопировать ссылку</button></div>
+      </div>
+    </section>
+
+    <section id="p-welcome" hidden>
+      <h1>Приветствие</h1><p class="sub">Сообщение, которое бот отправляет по команде /start</p>
+      <div class="ed">
+        <div class="card stack">
+          <div><label class="l">Текст</label>
+            <div class="tb">
+              <button class="btn ghost sm" onclick="wrap('<b>','</b>')"><b>B</b></button>
+              <button class="btn ghost sm" onclick="wrap('<i>','</i>')"><i>I</i></button>
+              <button class="btn ghost sm" onclick="wrap('<u>','</u>')"><u>U</u></button>
+              <button class="btn ghost sm" onclick="wrap('<s>','</s>')"><s>S</s></button>
+              <button class="btn ghost sm" onclick="wrap('<code>','</code>')">&lt;/&gt;</button>
+              <button class="btn ghost sm" onclick="wrap('<tg-spoiler>','</tg-spoiler>')">Спойлер</button>
+              <button class="btn ghost sm" onclick="ins('{name}')">{name}</button>
+              <button class="btn ghost sm" onclick="customEmoji()">✨ Анимир. эмодзи</button>
+            </div>
+            <textarea id="wtext" oninput="W.text=this.value;pv()"></textarea>
+            <div class="hint"><code>{name}</code> — имя пользователя. Анимированные (премиум) эмодзи: перешли боту сообщение с таким эмодзи (с админ-аккаунта) — он пришлёт ID.</div>
+          </div>
+          <div><label class="l">Фото</label>
+            <div class="drop"><img id="wimg" hidden><div class="grow stack">
+              <div class="row"><button class="btn ghost sm" onclick="$('#file').click()">Загрузить фото</button><button class="btn danger sm" onclick="W.photo='';$('#wphoto').value='';pv()">Убрать</button></div>
+              <input id="wphoto" class="in" placeholder="…или вставь ссылку / file_id" oninput="W.photo=this.value.trim();pv()">
+            </div></div><input id="file" type="file" accept="image/*" hidden onchange="upPhoto(this.files[0])">
+          </div>
+          <div class="grid g2">
+            <div><label class="l">Анимация сообщения</label>
+              <select id="weff" onchange="W.effect=this.value">
+                <option value="">Без анимации</option><option value="5104841245755180586">🔥 Огонь</option><option value="5046509860389126442">🎉 Конфетти</option>
+                <option value="5159385139981059251">❤️ Сердца</option><option value="5107584321108051014">👍 Лайк</option><option value="5104858069142078462">👎 Дизлайк</option><option value="5046589136895476101">💩 Кучка</option>
+              </select><div class="hint">Работает в личных чатах</div></div>
+            <div><label class="l">Анимированный стикер</label>
+              <input id="wst" class="in" placeholder="file_id стикера" oninput="W.sticker=this.value.trim()">
+              <div class="hint">Отправь стикер боту — он вернёт file_id</div></div>
+          </div>
+          <div><label class="l">Кнопки под сообщением</label><div id="btns"></div>
+            <button class="btn ghost sm" onclick="addBtn()">+ Добавить кнопку</button></div>
+          <div class="row"><button class="btn" onclick="saveWelcome()">Сохранить</button><button class="btn ghost" onclick="testWelcome()">Отправить мне тест</button></div>
+        </div>
+        <div class="pv"><div class="phone"><div class="bub"><img id="pvimg" hidden><div class="t" id="pvtxt"></div></div><div class="kb" id="pvkb"></div></div></div>
+      </div>
+    </section>
+
+    <section id="p-subs" hidden>
+      <h1>Обязательные подписки</h1><p class="sub">Перед скачиванием бот проверит подписку на эти каналы</p>
+      <div class="card stack">
+        <h2 style="margin:0">Добавить канал</h2>
+        <div class="row"><input id="cref" class="in grow" placeholder="@username, t.me/… или ID (-100…)"><input id="clink" class="in grow" placeholder="Пригласительная ссылка (для приватных)"><button class="btn" onclick="addCh()">Добавить</button></div>
+        <div class="hint">Сначала добавь бота администратором канала — иначе проверить подписку невозможно.</div>
+      </div>
+      <div class="card" style="margin-top:16px"><h2>Каналы</h2><div id="chs"></div></div>
+      <div class="card stack" style="margin-top:16px"><h2 style="margin:0">Текст запроса подписки</h2>
+        <textarea id="stext" style="min-height:110px"></textarea>
+        <div><button class="btn" onclick="saveSubs()">Сохранить текст</button></div></div>
+    </section>
+  </main>
+</div>
+<div id="toast"></div>
+
+<script>
+const $=s=>document.querySelector(s);let W={},EXP='';
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function toast(m,err){const t=$('#toast');t.textContent=m;t.className='on'+(err?' err':'');clearTimeout(t._);t._=setTimeout(()=>t.className='',2800)}
+async function api(u,m='GET',b){const r=await fetch('/admin/api/'+u,{method:m,headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined});
+  if(r.status===401){show(false);throw Error('Нужен вход')}const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.detail||'Ошибка');return d}
+const run=async f=>{try{await f()}catch(e){toast(e.message,1)}};
+function show(ok){$('#login').hidden=ok;$('#app').hidden=!ok}
+async function init(){try{await api('me');show(true);loadDash()}catch{show(false)}}
+function login(){run(async()=>{await api('login','POST',{password:$('#pw').value});show(true);loadDash()})}
+$('#pw').addEventListener('keydown',e=>e.key==='Enter'&&login());
+function logout(){api('logout','POST').finally(()=>show(false))}
+document.querySelectorAll('.nav[data-p]').forEach(b=>b.onclick=()=>{document.querySelectorAll('.nav').forEach(x=>x.classList.toggle('on',x===b));
+  ['dash','welcome','subs'].forEach(p=>$('#p-'+p).hidden=p!==b.dataset.p);({dash:loadDash,welcome:loadWelcome,subs:loadSubs})[b.dataset.p]()});
+
+/* ── Обзор ── */
+function loadDash(){run(async()=>{const s=await api('stats');EXP=s.expected;
+  $('#botline').textContent=s.bot.username?`@${s.bot.username}`:'Бот не отвечает — проверь BOT_TOKEN';
+  $('#stats').innerHTML=[['Пользователи',s.users],['Всего загрузок',s.downloads],['Сегодня',s.today],['За 7 дней',s.week]].map(([n,v])=>`<div class="card stat"><b>${v}</b><span>${n}</span></div>`).join('');
+  const mx=Math.max(1,...s.days.map(d=>d.count));
+  $('#bars').innerHTML=s.days.map(d=>`<div><i style="height:${d.count/mx*100}%"></i>${d.label}</div>`).join('');
+  const pm=Math.max(1,...s.platforms.map(p=>p.count));
+  $('#plats').innerHTML=s.platforms.map(p=>`<div class="hb"><span>${esc(p.name)}</span><i style="width:${p.count/pm*100}%"></i><b>${p.count}</b></div>`).join('')||'<p class="hint">Пока нет данных</p>';
+  const on=s.webhook.url===s.expected;$('#whpill').textContent=on?'● Подключён':'● Не подключён';$('#whpill').className='pill '+(on?'ok':'bad');
+  $('#whurl').textContent=s.expected;$('#wherr').textContent=(s.webhook.error?'Последняя ошибка: '+s.webhook.error+' · ':'')+'В очереди: '+s.webhook.pending})}
+function setHook(){run(async()=>{await api('webhook/set','POST');toast('Вебхук установлен ✓');loadDash()})}
+function copyUrl(){navigator.clipboard.writeText(EXP);toast('Ссылка скопирована')}
+
+/* ── Приветствие ── */
+function tgHtml(s){s=s.replace(/\{name\}/g,'Алекс');const d=new DOMParser().parseFromString('<div>'+s+'</div>','text/html');
+  const ok={B:1,STRONG:1,I:1,EM:1,U:1,S:1,STRIKE:1,DEL:1,CODE:1,PRE:1,A:1,BLOCKQUOTE:1};
+  const w=n=>{let o='';n.childNodes.forEach(c=>{if(c.nodeType===3)o+=esc(c.textContent);else if(c.nodeType===1){const t=c.tagName,i=w(c);
+    if(t==='TG-EMOJI')o+=`<span class="ce">${i}</span>`;else if(t==='TG-SPOILER')o+=`<span class="sp">${i}</span>`;
+    else if(ok[t]){const l=t.toLowerCase();o+=`<${l}>${i}</${l}>`}else o+=i}});return o};
+  return w(d.body.firstChild).replace(/\n/g,'<br>')}
+const src=p=>/^https?:/.test(p)?p:'/admin/api/photo?id='+encodeURIComponent(p);
+function pv(){$('#pvtxt').innerHTML=tgHtml(W.text||'');const has=!!W.photo;
+  [$('#pvimg'),$('#wimg')].forEach(i=>{i.hidden=!has;if(has)i.src=src(W.photo)});
+  $('#pvkb').innerHTML=(W.buttons||[]).filter(b=>b.text).map(b=>`<div>${esc(b.text)}</div>`).join('')}
+function drawBtns(){$('#btns').innerHTML=(W.buttons||[]).map((b,i)=>`<div class="bt"><input class="in" placeholder="Текст" value="${esc(b.text)}" oninput="W.buttons[${i}].text=this.value;pv()"><input class="in" placeholder="https://…" value="${esc(b.url)}" oninput="W.buttons[${i}].url=this.value"><button class="btn danger sm" onclick="W.buttons.splice(${i},1);drawBtns();pv()">✕</button></div>`).join('')}
+function addBtn(){W.buttons=W.buttons||[];if(W.buttons.length>=4)return toast('Максимум 4 кнопки',1);W.buttons.push({text:'',url:''});drawBtns()}
+function loadWelcome(){run(async()=>{const s=await api('settings');W=s.welcome;$('#wtext').value=W.text;$('#wphoto').value=W.photo||'';$('#weff').value=W.effect||'';$('#wst').value=W.sticker||'';drawBtns();pv()})}
+function wrap(a,b){const t=$('#wtext'),s=t.selectionStart,e=t.selectionEnd;t.setRangeText(a+t.value.slice(s,e)+b,s,e,'end');W.text=t.value;pv();t.focus()}
+function ins(x){const t=$('#wtext');t.setRangeText(x,t.selectionStart,t.selectionEnd,'end');W.text=t.value;pv();t.focus()}
+function customEmoji(){const id=prompt('ID анимированного эмодзи:');if(!id)return;const f=prompt('Обычный эмодзи-замена:','👋')||'👋';ins(`<tg-emoji emoji-id="${id.trim()}">${f}</tg-emoji>`)}
+async function upPhoto(f){if(!f)return;run(async()=>{const im=await createImageBitmap(f),k=Math.min(1,1280/Math.max(im.width,im.height)),c=document.createElement('canvas');
+  c.width=im.width*k;c.height=im.height*k;c.getContext('2d').drawImage(im,0,0,c.width,c.height);
+  const r=await api('photo','POST',{data:c.toDataURL('image/jpeg',.86).split(',')[1]});W.photo=r.file_id;$('#wphoto').value=r.file_id;pv();toast('Фото загружено ✓')})}
+function saveWelcome(){run(async()=>{await api('settings','POST',{welcome:W});toast('Приветствие сохранено ✓')})}
+function testWelcome(){run(async()=>{await api('welcome/test','POST',{welcome:W});toast('Отправлено тебе в Telegram ✓')})}
+
+/* ── Подписки ── */
+function loadSubs(){run(async()=>{const [c,s]=await Promise.all([api('channels'),api('settings')]);$('#stext').value=s.subs_text;
+  $('#chs').innerHTML=c.map(x=>`<div class="ch"><div class="grow"><b>${esc(x.title)}</b><div class="hint" style="margin:0">${x.username?'@'+esc(x.username):esc(x.link||'')} · <span class="pill ${x.bot_ok?'ok':'bad'}">${x.bot_ok?'бот админ ✓':'бот не админ'}</span></div></div>
+   <label class="sw"><input type="checkbox" ${x.enabled?'checked':''} onchange="togCh(${x.id},this.checked)"><span></span></label><button class="btn danger sm" onclick="delCh(${x.id})">Удалить</button></div>`).join('')||'<p class="hint">Каналов пока нет — подписка не требуется</p>'})}
+function addCh(){run(async()=>{await api('channels','POST',{ref:$('#cref').value,link:$('#clink').value});$('#cref').value=$('#clink').value='';toast('Канал добавлен ✓');loadSubs()})}
+function togCh(id,v){run(()=>api('channels/'+id,'PATCH',{enabled:v}))}
+function delCh(id){if(confirm('Удалить канал из обязательных?'))run(async()=>{await api('channels/'+id,'DELETE');loadSubs()})}
+function saveSubs(){run(async()=>{await api('settings','POST',{subs_text:$('#stext').value});toast('Текст сохранён ✓')})}
+init();
+</script>
+</body>
+</html>
